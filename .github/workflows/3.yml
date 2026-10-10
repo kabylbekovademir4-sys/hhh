@@ -1,0 +1,45 @@
+# Положите этот файл в репозитории по пути: .github/workflows/post.yml
+name: Post to Telegram
+
+on:
+  schedule:
+    # Время в UTC: 06:00, 10:00, 16:00 (примерно 9:00, 13:00, 19:00 по Москве)
+    - cron: "0 6 * * *"
+    - cron: "0 10 * * *"
+    - cron: "0 16 * * *"
+  workflow_dispatch: # кнопка ручного запуска
+
+permissions:
+  contents: write
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Run bot
+        run: python bot.py
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          TELEGRAM_OWNER_ID: ${{ secrets.TELEGRAM_OWNER_ID }}
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CHANNEL_FOOTER: ${{ secrets.CHANNEL_FOOTER }}
+          MODE: draft # поменяйте на auto, когда будете довольны постами
+
+      - name: Save state
+        run: |
+          git config user.name "neuro-bot"
+          git config user.email "neuro-bot@users.noreply.github.com"
+          git add posted.json || true
+          git diff --cached --quiet || (git commit -m "update posted state" && git push)
